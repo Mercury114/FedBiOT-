@@ -1,0 +1,28 @@
+use_gpu: True
+device: 0
+federate:
+  mode: standalone
+  total_round_num: 5
+  client_num: 3
+data:
+  root: data/
+  type: gsm8k@llm
+  splits: [0.8, 0.1, 0.1]
+  splitter: iid
+llm:
+  tok_len: 650
+  adapter:
+    use: True
+    args: [{adapter_package: peft, adapter_method: lora, r: 8}]
+model:
+  type: gpt2@huggingface_llm
+train:
+  local_update_steps: 2
+  optimizer:
+    lr: 0.003
+trainer:
+  type: llmtrainer
+dataloader:
+  batch_size: 1
+eval:
+  count_flops: False

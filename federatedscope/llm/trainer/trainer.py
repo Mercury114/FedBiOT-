@@ -187,46 +187,31 @@ class LLMTrainer(GeneralTorchTrainer):
                     ReIterator(ctx.get("{}_loader".format(ctx.cur_split))))
 
     def _hook_on_batch_forward(self, ctx):
-        if ctx.cfg.llm.accelerator.use:
-            input_ids = ctx.data_batch['input_ids']
-            labels = ctx.data_batch['labels']
-            attention_mask = ctx.data_batch['attention_mask']
-            outputs = ctx.model(input_ids=input_ids,
-                                labels=labels,
-                                attention_mask=attention_mask)
+        import torch
+        from torch.nn import CrossEntropyLoss
+        
+        # 初始化标志位，防止后面 backward 报错
+        ctx.skip_this_batch = False
 
-        elif ctx.cfg.llm.deepspeed.use:
+        # 1. 获取数据
+        if isinstance(ctx.data_batch, dict):
             input_ids = ctx.data_batch['input_ids'].to(ctx.device)
             labels = ctx.data_batch['labels'].to(ctx.device)
-            attention_mask = ctx.data_batch['attention_mask'].to(ctx.device)
-            outputs = ctx.model_engine(input_ids=input_ids,
-                                       labels=labels,
-                                       attention_mask=attention_mask)
-
         else:
-            input_ids = ctx.data_batch['input_ids'].to(ctx.device)
-            labels = ctx.data_batch['labels'].to(ctx.device)
-            attention_mask = ctx.data_batch['attention_mask'].to(ctx.device)
-            outputs = ctx.model(input_ids=input_ids,
-                                labels=labels,
-                                attention_mask=attention_mask)
+            input_ids = ctx.data_batch[0].to(ctx.device)
+            labels = ctx.data_batch[1].to(ctx.device)
 
-        logits = outputs.logits
-        loss = outputs.loss
+        # 2. 模型前向传播
+        outputs = ctx.model(input_ids, labels=labels)
+        logits = outputs.logits if hasattr(outputs, 'logits') else outputs
 
-        if torch.isnan(loss):
-            ctx.skip_this_batch = CtxVar(True, LIFECYCLE.BATCH)
-            logger.warning('Skip the batch due to the loss is NaN, '
-                           'it may be caused by exceeding the precision or '
-                           'invalid labels.')
-        else:
-            ctx.skip_this_batch = CtxVar(False, LIFECYCLE.BATCH)
-
-        ctx.y_true = CtxVar(labels, LIFECYCLE.BATCH)
-        ctx.y_prob = CtxVar(logits, LIFECYCLE.BATCH)
-
-        ctx.loss_batch = CtxVar(loss, LIFECYCLE.BATCH)
-        ctx.batch_size = CtxVar(len(labels), LIFECYCLE.BATCH)
+        # 3. 计算 Loss
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_labels = labels[..., 1:].contiguous()
+        loss_fct = CrossEntropyLoss()
+        ctx.loss_batch = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
+        
+        ctx.batch_size = len(labels)
 
     def _hook_on_batch_backward(self, ctx):
         if ctx.skip_this_batch:

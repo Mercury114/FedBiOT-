@@ -68,6 +68,11 @@ class LLMDataset(Dataset):
         self.input_ids = data_dict["input_ids"]
         self.labels = data_dict["labels"]
 
+        # 添加这3行：转换为 PyTorch 张量
+        import torch
+        self.input_ids = [torch.tensor(x) for x in self.input_ids]
+        self.labels = [torch.tensor(x) for x in self.labels]
+
         self.tokenizer = tokenizer
 
         categories = [
@@ -118,9 +123,10 @@ class LLMDataset(Dataset):
         return len(self.input_ids)
 
     def __getitem__(self, i):
-        return dict(input_ids=self.input_ids[i],
-                    labels=self.labels[i],
-                    categories=self.categories[i])
+        return {
+            'input_ids': self.input_ids[i],
+            'labels': self.labels[i]
+       }
 
     # def overwrite_by_llm(self, i):
     #     source = self.sources[i]

@@ -1,0 +1,38 @@
+use_gpu: True
+device: 0
+federate:
+  mode: standalone
+  total_round_num: 100
+  client_num: 3
+data:
+  root: data/
+  type: gsm8k@llm
+  splits: [0.8, 0.1, 0.1]
+  splitter: iid
+llm:
+  tok_len: 650
+  cache:
+    model: /home/huimchen/models
+  adapter:
+    use: True
+    args: [{adapter_package: peft, adapter_method: lora, r: 8, lora_alpha: 32}]
+  offsite_tuning:
+    use: True
+    emu_align:
+      use: False  # 【关闭】不需要对齐数据
+    emu_l: 2
+    emu_r: 30
+model:
+  type: gpt2@huggingface_llm
+train:
+  local_update_steps: 30
+  optimizer:
+    lr: 0.003
+trainer:
+  type: llmtrainer
+dataloader:
+  batch_size: 1
+eval:
+  freq: 50
+  metrics: ['loss']
+  count_flops: False

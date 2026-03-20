@@ -1,0 +1,42 @@
+use_gpu: True
+device: 0
+federate:
+  mode: standalone
+  total_round_num: 10
+  save_to: fedbiot_test.ckpt
+  client_num: 3
+  share_local_model: True
+data:
+  root: data/
+  type: gsm8k@llm
+  splits: [0.8, 0.1, 0.1]
+llm:
+  tok_len: 650
+  cache:
+    model: /home/huimchen/models
+  adapter:
+    use: True
+    args: [{adapter_package: peft, adapter_method: lora, r: 8, lora_alpha: 32, lora_dropout: 0.1}]
+  offsite_tuning:
+    use: True
+    emu_align:
+      use: True
+    emu_l: 2
+    emu_r: 30
+model:
+  type: gpt2@huggingface_llm
+train:
+  local_update_steps: 5
+  batch_or_epoch: batch
+  optimizer:
+    type: AdamW
+    lr: 0.003
+    weight_decay: 0.0
+  is_enable_half: True
+dataloader:
+  batch_size: 1
+trainer:
+  type: llmtrainer
+eval:
+  freq: 5
+  metrics: [loss]

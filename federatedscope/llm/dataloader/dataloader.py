@@ -35,11 +35,7 @@ class LLMDataCollator(object):
             labels,
             batch_first=True,
             padding_value=DefaultToken.IGNORE_INDEX.value)
-        return dict(
-            input_ids=input_ids,
-            labels=labels,
-            attention_mask=input_ids.ne(self.tokenizer.pad_token_id),
-        )
+        return (input_ids, labels)
 
 
 class Predictor:
@@ -82,10 +78,10 @@ def get_tokenizer(model_name, cache_dir, tok_len=128):
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,
-        cache_dir=cache_dir,
         model_max_length=tok_len,
         padding_side="right",
         use_fast=False,
+        local_files_only=True,
     )
 
     special_tokens = dict()
@@ -210,7 +206,7 @@ def load_jsonls(file_paths,
 def load_llm_dataset(config=None, **kwargs):
     model_name, _ = config.model.type.split('@')
     tokenizer, num_new_tokens = \
-        get_tokenizer(model_name, config.data.root, config.llm.tok_len)
+        get_tokenizer(model_name, config.llm.cache.model, config.llm.tok_len)
 
     dataset_name, _ = config.data.type.split('@')
 

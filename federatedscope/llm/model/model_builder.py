@@ -11,7 +11,7 @@ def get_model_from_huggingface(model_name, config, **kwargs):
     if config.train.is_enable_half:
         kwargs['torch_dtype'] = torch.bfloat16
 
-    return AutoModelForCausalLM.from_pretrained(model_name, **kwargs)
+    return AutoModelForCausalLM.from_pretrained(model_name, local_files_only=True, **kwargs)
 
 
 def get_model_from_modelscope(model_name, config, **kwargs):
@@ -20,7 +20,7 @@ def get_model_from_modelscope(model_name, config, **kwargs):
     if len(config.llm.cache.model):
         kwargs['cache_dir'] = config.llm.cache.model
 
-    return AutoModelForCausalLM.from_pretrained(model_name, **kwargs)
+    return AutoModelForCausalLM.from_pretrained(model_name, local_files_only=True, **kwargs)
 
 
 def get_llm(config, **kwargs):

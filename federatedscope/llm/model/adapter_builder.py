@@ -173,12 +173,23 @@ class AdapterModel(nn.Module):
     def get_input_embeddings(self):
         return self.model.get_input_embeddings()
 
-    def forward(self, disable_adapter=False, *args, **kwargs):
+    def forward(self, *args, **kwargs):
+        # 1. 提取参数
+        disable_adapter = kwargs.pop('disable_adapter', False)
+        if isinstance(disable_adapter, torch.Tensor):
+            disable_adapter = disable_adapter.bool().item() if disable_adapter.numel() == 1 else False
+    
+        # 2. 执行模型
         if isinstance(self.model, PeftModel) and disable_adapter:
             with self.model.disable_adapter():
-                return self.model(*args, **kwargs)
+                output = self.model(*args, **kwargs)
+        else:
+            output = self.model.forward(*args, **kwargs)
 
-        return self.model.forward(*args, **kwargs)
+        # 3. 提取 logits 供 trainer 计算 loss
+        if hasattr(output, 'logits'):
+            return output.logits
+        return output
 
     def generate(self, disable_adapter=False, *args, **kwargs):
         try:
