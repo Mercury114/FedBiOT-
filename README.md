@@ -54,6 +54,7 @@ FedBiOT 提出 **"Offsite-tuning"** 框架，核心思想：
 │  只更新 Adapter 的 LoRA 参数           │                 │
 └─────────────────────────────────────────────────────────┘
 ```
+![FedBiOT Framework](99b6aae83fe6d5aecb71ab998037049e.png)
 
 ### 1.3 双层优化机制
 
